@@ -58,3 +58,6 @@ dkms.conf
 
 platformio.ini
 src/main.cpp
+.DS_Store
+scripts/.DS_Store
+src/.DS_Store
