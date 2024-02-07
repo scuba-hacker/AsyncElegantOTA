@@ -77,6 +77,14 @@ class AsyncElegantOtaClass{
             });
 
             _server->on("/update", HTTP_GET, [&](AsyncWebServerRequest *request){
+                String agent = request->getHeader("User-Agent")->value();
+
+                if (agent.indexOf("Safari") != -1 && 
+                    agent.indexOf("Chrome") == -1)
+                {
+                    return request->send(400, "text/plain", "Use Chrome or Firefox and not Safari for OTA updates");
+                }
+
                 if(_authRequired){
                     if(!request->authenticate(_username.c_str(), _password.c_str())){
                         return request->requestAuthentication();
