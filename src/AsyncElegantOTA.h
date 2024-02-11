@@ -201,6 +201,4 @@ class AsyncElegantOtaClass{
         bool _authRequired = false;
 
 };
-
-AsyncElegantOtaClass AsyncElegantOTA;
 #endif
