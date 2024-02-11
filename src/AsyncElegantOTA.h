@@ -185,8 +185,10 @@ class AsyncElegantOtaClass{
             ESP.restart();
         }
 
-    private:
+    protected:
         AsyncWebServer *_server;
+
+    private:
 
         String getID(){
             String id = "";
