@@ -44,7 +44,19 @@
 
 class AsyncElegantOtaClass{
 
+
+    void (*uploadBeginFn)(AsyncElegantOtaClass* elegantOTA);
+
     public:
+
+        AsyncElegantOtaClass() : uploadBeginFn(nullptr)
+        {
+        }
+
+        void setUploadBeginCallback(void (*uploadFn)(AsyncElegantOtaClass* elegantOTA))
+        {
+            uploadBeginFn = uploadFn;
+        }
 
         void setID(const char* id){
             _id = id;
@@ -117,6 +129,10 @@ class AsyncElegantOtaClass{
                         return request->send(400, "text/plain", "MD5 parameter invalid");
                     }
 
+                    // Callback into client code at start of upload for any pre-upload housekeeping.
+                    if (uploadBeginFn)
+                     (*uploadBeginFn)(this);
+
                     #if defined(ESP8266)
                         int cmd = (filename == "filesystem") ? U_FS : U_FLASH;
                         Update.runAsync(true);
@@ -181,6 +197,4 @@ class AsyncElegantOtaClass{
         bool _authRequired = false;
 
 };
-
-AsyncElegantOtaClass AsyncElegantOTA;
 #endif
