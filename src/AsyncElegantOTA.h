@@ -39,21 +39,25 @@
     #include "elegantWebpage.h"
 #endif
 
-
 class AsyncElegantOtaClass{
 
-
     void (*uploadBeginFn)(AsyncElegantOtaClass* elegantOTA);
+    void (*uploadSucceededFn)(AsyncElegantOtaClass* elegantOTA);
 
     public:
 
-        AsyncElegantOtaClass() : uploadBeginFn(nullptr)
+        AsyncElegantOtaClass() : uploadBeginFn(nullptr), uploadSucceededFn(nullptr)
         {
         }
 
         void setUploadBeginCallback(void (*uploadFn)(AsyncElegantOtaClass* elegantOTA))
         {
             uploadBeginFn = uploadFn;
+        }
+
+        void setUploadSucceededCallback(void (*succeedFn)(AsyncElegantOtaClass* elegantOTA))
+        {
+            uploadSucceededFn = succeedFn;
         }
 
         void setID(const char* id){
@@ -117,8 +121,10 @@ class AsyncElegantOtaClass{
                 response->addHeader("Connection", "close");
                 response->addHeader("Access-Control-Allow-Origin", "*");
                 request->send(response);
+
                 restart();
-            }, [&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+
+                }, [&](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
                 //Upload handler chunks in data
                 if(_authRequired){
                     if(!request->authenticate(_username.c_str(), _password.c_str())){
@@ -173,10 +179,21 @@ class AsyncElegantOtaClass{
         }
         
         void restart() {
-            yield();
-            delay(1000);
-            yield();
-            ESP.restart();
+
+            if (uploadSucceededFn)
+            {
+                // Client code must do a non-blocking timer and then restart the ESP32
+                (*uploadSucceededFn)(this);
+            }
+            else
+            {
+                // This is the default blocking restart that doesn't play nicely with getting an 
+                // HTTP response back to the browser to say that upload is complete
+                yield();
+                delay(1000);
+                yield();
+                ESP.restart();
+            }
         }
 
     protected:
