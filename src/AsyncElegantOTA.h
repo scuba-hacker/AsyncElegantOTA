@@ -42,17 +42,25 @@
 class AsyncElegantOtaClass{
 
     void (*uploadBeginFn)(AsyncElegantOtaClass* elegantOTA);
+    void (*uploadProgressFn)(AsyncElegantOtaClass* elegantOTA, size_t progress, size_t total);
     void (*uploadSucceededFn)(AsyncElegantOtaClass* elegantOTA);
+    
+    size_t _uploadTotalSize;
 
     public:
 
-        AsyncElegantOtaClass() : uploadBeginFn(nullptr), uploadSucceededFn(nullptr)
+        AsyncElegantOtaClass() : uploadBeginFn(nullptr), uploadProgressFn(nullptr), uploadSucceededFn(nullptr), _uploadTotalSize(0)
         {
         }
 
         void setUploadBeginCallback(void (*uploadFn)(AsyncElegantOtaClass* elegantOTA))
         {
             uploadBeginFn = uploadFn;
+        }
+
+        void setUploadProgressCallback(void (*progressFn)(AsyncElegantOtaClass* elegantOTA, size_t progress, size_t total))
+        {
+            uploadProgressFn = progressFn;
         }
 
         void setUploadSucceededCallback(void (*succeedFn)(AsyncElegantOtaClass* elegantOTA))
@@ -141,6 +149,15 @@ class AsyncElegantOtaClass{
                         return request->send(400, "text/plain", "MD5 parameter invalid");
                     }
 
+                    // Get the total upload size from Content-Length header
+                    _uploadTotalSize = 0;
+                    if (request->hasHeader("Content-Length")) {
+                        _uploadTotalSize = request->getHeader("Content-Length")->value().toInt();
+                        Serial.printf("OTA Upload Content-Length: %zu bytes\n", _uploadTotalSize);
+                    } else {
+                        Serial.println("OTA Upload: No Content-Length header found");
+                    }
+
                     // Callback into client code at start of upload for any pre-upload housekeeping.
                     if (uploadBeginFn)
                      (*uploadBeginFn)(this);
@@ -165,12 +182,22 @@ class AsyncElegantOtaClass{
                     if (Update.write(data, len) != len) {
                         return request->send(400, "text/plain", "OTA could not begin");
                     }
+                    
+                    // Call progress callback if set - use real total size from Content-Length
+                    if (uploadProgressFn) {
+                        (*uploadProgressFn)(this, Update.progress(), _uploadTotalSize);
+                    }
                 }
                     
                 if (final) { // if the final flag is set then this is the last frame of data
                     if (!Update.end(true)) { //true to set the size to the current progress
                         Update.printError(Serial);
                         return request->send(400, "text/plain", "Could not end OTA");
+                    }
+                    
+                    // Call progress callback one final time to ensure 100% completion
+                    if (uploadProgressFn) {
+                        (*uploadProgressFn)(this, _uploadTotalSize, _uploadTotalSize);
                     }
                 }else{
                     return;
