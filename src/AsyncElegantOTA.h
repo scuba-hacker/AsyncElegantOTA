@@ -205,6 +205,8 @@ class AsyncElegantOtaClass{
             });
         }
         
+        // DO NOT USE - BLOCKING CALL CAUSING PROBLEM WITH CHROME NOT RECEIVING COMPLETION MESSAGE
+        // MUST USE ASYNC WAIT IN LOOP()
         void restart() {
 
             if (uploadSucceededFn)
@@ -216,6 +218,7 @@ class AsyncElegantOtaClass{
             {
                 // This is the default blocking restart that doesn't play nicely with getting an 
                 // HTTP response back to the browser to say that upload is complete
+                // 
                 yield();
                 delay(1000);
                 yield();
